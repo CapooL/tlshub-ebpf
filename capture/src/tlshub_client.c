@@ -55,7 +55,8 @@ void tlshub_client_cleanup(void) {
  */
 int tlshub_fetch_key(struct flow_tuple *tuple, struct tls_key_info *key_info) {
     struct sockaddr_nl dest_addr;
-    struct nlmsghdr *nlh = NULL;
+    struct nlmsghdr *nlh_send = NULL;
+    struct nlmsghdr *nlh_recv = NULL;
     struct iovec iov;
     struct msghdr msg;
     int ret;
@@ -65,21 +66,21 @@ int tlshub_fetch_key(struct flow_tuple *tuple, struct tls_key_info *key_info) {
         return -1;
     }
     
-    /* 分配 Netlink 消息 */
-    nlh = (struct nlmsghdr*)malloc(NLMSG_SPACE(sizeof(struct flow_tuple)));
-    if (!nlh) {
-        fprintf(stderr, "Failed to allocate netlink message\n");
+    /* 分配发送 Netlink 消息 */
+    nlh_send = (struct nlmsghdr*)malloc(NLMSG_SPACE(sizeof(struct flow_tuple)));
+    if (!nlh_send) {
+        fprintf(stderr, "Failed to allocate netlink send message\n");
         return -1;
     }
     
-    memset(nlh, 0, NLMSG_SPACE(sizeof(struct flow_tuple)));
-    nlh->nlmsg_len = NLMSG_SPACE(sizeof(struct flow_tuple));
-    nlh->nlmsg_pid = getpid();
-    nlh->nlmsg_flags = 0;
-    nlh->nlmsg_type = NLMSG_TYPE_FETCH_KEY;
+    memset(nlh_send, 0, NLMSG_SPACE(sizeof(struct flow_tuple)));
+    nlh_send->nlmsg_len = NLMSG_SPACE(sizeof(struct flow_tuple));
+    nlh_send->nlmsg_pid = getpid();
+    nlh_send->nlmsg_flags = 0;
+    nlh_send->nlmsg_type = NLMSG_TYPE_FETCH_KEY;
     
     /* 复制四元组信息 */
-    memcpy(NLMSG_DATA(nlh), tuple, sizeof(struct flow_tuple));
+    memcpy(NLMSG_DATA(nlh_send), tuple, sizeof(struct flow_tuple));
     
     /* 设置目标地址（内核） */
     memset(&dest_addr, 0, sizeof(dest_addr));
@@ -88,8 +89,8 @@ int tlshub_fetch_key(struct flow_tuple *tuple, struct tls_key_info *key_info) {
     dest_addr.nl_groups = 0;
     
     /* 发送消息 */
-    iov.iov_base = (void*)nlh;
-    iov.iov_len = nlh->nlmsg_len;
+    iov.iov_base = (void*)nlh_send;
+    iov.iov_len = nlh_send->nlmsg_len;
     memset(&msg, 0, sizeof(msg));
     msg.msg_name = (void*)&dest_addr;
     msg.msg_namelen = sizeof(dest_addr);
@@ -99,24 +100,34 @@ int tlshub_fetch_key(struct flow_tuple *tuple, struct tls_key_info *key_info) {
     ret = sendmsg(netlink_sock, &msg, 0);
     if (ret < 0) {
         perror("Failed to send fetch_key message");
-        free(nlh);
+        free(nlh_send);
+        return -1;
+    }
+    
+    free(nlh_send);
+    
+    /* 分配接收 Netlink 消息 */
+    nlh_recv = (struct nlmsghdr*)malloc(NLMSG_SPACE(sizeof(struct tls_key_info)));
+    if (!nlh_recv) {
+        fprintf(stderr, "Failed to allocate netlink recv message\n");
         return -1;
     }
     
     /* 等待响应 */
-    memset(nlh, 0, NLMSG_SPACE(sizeof(struct tls_key_info)));
+    memset(nlh_recv, 0, NLMSG_SPACE(sizeof(struct tls_key_info)));
+    iov.iov_base = (void*)nlh_recv;
     iov.iov_len = NLMSG_SPACE(sizeof(struct tls_key_info));
     ret = recvmsg(netlink_sock, &msg, 0);
     if (ret < 0) {
         perror("Failed to receive fetch_key response");
-        free(nlh);
+        free(nlh_recv);
         return -1;
     }
     
     /* 复制密钥信息 */
-    memcpy(key_info, NLMSG_DATA(nlh), sizeof(struct tls_key_info));
+    memcpy(key_info, NLMSG_DATA(nlh_recv), sizeof(struct tls_key_info));
     
-    free(nlh);
+    free(nlh_recv);
     printf("Fetched TLS key from TLSHub (key_len: %u)\n", key_info->key_len);
     return 0;
 }
