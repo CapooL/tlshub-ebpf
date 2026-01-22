@@ -258,7 +258,7 @@ int tlshub_service_init(void)
                        (struct sockaddr*)&daddr,
                        &len);
         if (!ret) {
-            DEBUG_PRINTF(DEBUG_LEVEL_ERR, "recv form kernel error\n");
+            DEBUG_PRINTF(DEBUG_LEVEL_ERR, "recv from kernel error\n");
             return -2;
         }
         DEBUG_PRINTF(DEBUG_LEVEL_DEBUG, "%s\n", u_info.msg);
@@ -347,7 +347,7 @@ int tlshub_handshake(uint32_t client_pod_ip,
                        (struct sockaddr*)&g_netlink_ctx.daddr,
                        &len);
         if (!ret) {
-            DEBUG_PRINTF(DEBUG_LEVEL_ERR, "recv form kernel error\n");
+            DEBUG_PRINTF(DEBUG_LEVEL_ERR, "recv from kernel error\n");
             return -2;
         }
         DEBUG_PRINTF(DEBUG_LEVEL_DEBUG, "%s\n", u_info.msg);
@@ -434,7 +434,7 @@ struct key_back tlshub_fetch_key(uint32_t client_pod_ip,
                    (struct sockaddr*)&ctx.daddr,
                    &len);
     if (!ret) {
-        DEBUG_PRINTF(DEBUG_LEVEL_ERR, "recv form kernel error\n");
+        DEBUG_PRINTF(DEBUG_LEVEL_ERR, "recv from kernel error\n");
         netlink_ctx_cleanup(&ctx, true);
         exit(-1);
     }
