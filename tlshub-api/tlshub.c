@@ -225,7 +225,7 @@ int tlshub_service_init(void)
 
     nlh = malloc_netlink_pkthdr();
 
-    if (nlh < 0) {
+    if (nlh == NULL) {
         DEBUG_PRINTF(DEBUG_LEVEL_ERR, "nlh malloc failed !\n");
         return -1;
     }

@@ -2,6 +2,8 @@
 
 TLShub 的 Layer 4 友好性测试仓库，包含配套的流量捕获模块。
 
+> **重要更新（2024-01）**：所有接口已从 "hypertls" 重命名为 "tlshub" 以保持项目命名一致性。详见 [tlshub-api](./tlshub-api/) 目录。
+
 ## 项目简介
 
 本项目为 [TLSHub](https://github.com/lin594/tlshub) 提供配套的流量捕获和测试模块。TLSHub 是一个 Layer 4 友好的内核级 mTLS 握手模块，而本项目通过 eBPF 技术实现了应用程序 Socket 连接的无感劫持和 KTLS 密钥配置。
@@ -35,15 +37,24 @@ TLShub 的 Layer 4 友好性测试仓库，包含配套的流量捕获模块。
 
 ```
 .
-├── README.md           # 本文件
-├── tlshub/             # TLSHub 子模块（内核级 mTLS 握手模块）
-└── capture/            # 流量捕获模块
-    ├── include/        # 头文件
-    ├── src/            # 源代码（包括 eBPF 程序）
-    ├── config/         # 配置文件
-    ├── test/           # 测试文件
-    ├── docs/           # 详细文档
-    └── Makefile        # 编译配置
+├── README.md            # 本文件
+├── tlshub/              # TLSHub 子模块（内核级 mTLS 握手模块）
+├── tlshub-api/          # TLSHub 用户态 API（正确的接口调用方式）
+│   ├── tlshub.h         # API 头文件
+│   ├── tlshub.c         # API 实现
+│   ├── tlshub_handshake.c  # 测试示例
+│   ├── Makefile         # 编译配置
+│   └── README.md        # API 使用说明
+├── docs/                # 完整中文文档
+│   ├── TLSHUB_API_CN.md        # API 详细文档
+│   └── INTEGRATION_GUIDE_CN.md # 集成指南
+└── capture/             # 流量捕获模块
+    ├── include/         # 头文件
+    ├── src/             # 源代码（包括 eBPF 程序）
+    ├── config/          # 配置文件
+    ├── test/            # 测试文件
+    ├── docs/            # 详细文档
+    └── Makefile         # 编译配置
 ```
 
 ## 快速开始
@@ -99,6 +110,14 @@ sudo ./capture /path/to/custom/capture.conf
 ```
 
 ## 文档
+
+### TLSHub API 文档
+
+- [tlshub-api/README.md](tlshub-api/README.md) - API 快速开始
+- [docs/TLSHUB_API_CN.md](docs/TLSHUB_API_CN.md) - 完整的 API 中文文档
+- [docs/INTEGRATION_GUIDE_CN.md](docs/INTEGRATION_GUIDE_CN.md) - 集成指南
+
+### Capture 模块文档
 
 详细的中文文档位于 `capture/docs/` 目录：
 
