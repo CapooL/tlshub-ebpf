@@ -1,0 +1,35 @@
+# Build artifacts
+build/
+bin/
+*.o
+*.so
+*.a
+*.ll
+*.bc
+
+# Editor files
+*.swp
+*.swo
+*~
+.vscode/
+.idea/
+*.iml
+
+# OS files
+.DS_Store
+Thumbs.db
+
+# Temporary files
+/tmp/
+*.tmp
+*.log
+
+# Package manager
+node_modules/
+__pycache__/
+*.pyc
+
+# Core dumps
+core
+core.*
+vgcore.*
