@@ -2,8 +2,8 @@
 *.o
 *.so
 *.a
-capture
-capture.bpf.o
+/capture/capture
+/capture/capture.bpf.o
 
 # Editor files
 *~
