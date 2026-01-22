@@ -49,10 +49,23 @@ int enable_ktls_tx(int sockfd, struct tls_key_info *key_info) {
     crypto_info.info.version = TLS_1_2_VERSION;
     crypto_info.info.cipher_type = TLS_CIPHER_AES_GCM_128;
     
-    /* 复制密钥和 IV */
+    /* 复制密钥 */
     memcpy(crypto_info.key, key_info->key, TLS_CIPHER_AES_GCM_128_KEY_SIZE);
-    memcpy(crypto_info.iv, key_info->iv, TLS_CIPHER_AES_GCM_128_IV_SIZE);
-    memcpy(crypto_info.salt, key_info->iv, TLS_CIPHER_AES_GCM_128_SALT_SIZE);
+    
+    /* 
+     * 对于 AES-GCM，IV 包含 salt (4 bytes) 和 nonce (8 bytes)
+     * 从密钥材料中正确提取 salt 和 IV
+     */
+    if (key_info->iv_len >= 12) {
+        /* 前 4 字节作为 salt，后 8 字节作为 IV */
+        memcpy(crypto_info.salt, key_info->iv, TLS_CIPHER_AES_GCM_128_SALT_SIZE);
+        memcpy(crypto_info.iv, key_info->iv + TLS_CIPHER_AES_GCM_128_SALT_SIZE, 
+               TLS_CIPHER_AES_GCM_128_IV_SIZE);
+    } else {
+        fprintf(stderr, "Warning: IV length insufficient, using zero padding\n");
+        memcpy(crypto_info.salt, key_info->iv, 
+               key_info->iv_len < 4 ? key_info->iv_len : 4);
+    }
     
     /* 配置发送密钥 */
     ret = setsockopt(sockfd, SOL_TLS, TLS_TX, &crypto_info, sizeof(crypto_info));
@@ -77,10 +90,23 @@ int enable_ktls_rx(int sockfd, struct tls_key_info *key_info) {
     crypto_info.info.version = TLS_1_2_VERSION;
     crypto_info.info.cipher_type = TLS_CIPHER_AES_GCM_128;
     
-    /* 复制密钥和 IV */
+    /* 复制密钥 */
     memcpy(crypto_info.key, key_info->key, TLS_CIPHER_AES_GCM_128_KEY_SIZE);
-    memcpy(crypto_info.iv, key_info->iv, TLS_CIPHER_AES_GCM_128_IV_SIZE);
-    memcpy(crypto_info.salt, key_info->iv, TLS_CIPHER_AES_GCM_128_SALT_SIZE);
+    
+    /* 
+     * 对于 AES-GCM，IV 包含 salt (4 bytes) 和 nonce (8 bytes)
+     * 从密钥材料中正确提取 salt 和 IV
+     */
+    if (key_info->iv_len >= 12) {
+        /* 前 4 字节作为 salt，后 8 字节作为 IV */
+        memcpy(crypto_info.salt, key_info->iv, TLS_CIPHER_AES_GCM_128_SALT_SIZE);
+        memcpy(crypto_info.iv, key_info->iv + TLS_CIPHER_AES_GCM_128_SALT_SIZE, 
+               TLS_CIPHER_AES_GCM_128_IV_SIZE);
+    } else {
+        fprintf(stderr, "Warning: IV length insufficient, using zero padding\n");
+        memcpy(crypto_info.salt, key_info->iv, 
+               key_info->iv_len < 4 ? key_info->iv_len : 4);
+    }
     
     /* 配置接收密钥 */
     ret = setsockopt(sockfd, SOL_TLS, TLS_RX, &crypto_info, sizeof(crypto_info));

@@ -38,19 +38,27 @@ echo ""
 
 # 测试 Pod-Node 映射
 echo "3. 测试 Pod-Node 映射..."
-cat > /tmp/test_pod_node.conf <<EOF
+# 创建临时目录和文件
+TEMP_DIR=$(mktemp -d)
+TEMP_CONF="$TEMP_DIR/test_pod_node.conf"
+TEMP_BIN="$TEMP_DIR/test_pod_mapping"
+
+cat > "$TEMP_CONF" <<EOF
 test-pod-1 test-node-1
 test-pod-2 test-node-2
 test-pod-3 test-node-3
 EOF
 
-gcc -o /tmp/test_pod_mapping test_pod_mapping.c ../src/pod_mapping.c -I../include
-/tmp/test_pod_mapping /tmp/test_pod_node.conf
+gcc -o "$TEMP_BIN" test_pod_mapping.c ../src/pod_mapping.c -I../include
+"$TEMP_BIN" "$TEMP_CONF"
 if [ $? -eq 0 ]; then
     echo "   ✓ Pod-Node 映射测试通过"
 else
     echo "   ✗ Pod-Node 映射测试失败"
 fi
+
+# 清理临时文件
+rm -rf "$TEMP_DIR"
 echo ""
 
 # 运行捕获模块（演示模式）

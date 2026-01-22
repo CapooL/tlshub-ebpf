@@ -197,7 +197,25 @@ int main(int argc, char **argv) {
     
     /* 加载 eBPF 程序 */
     printf("Loading eBPF program...\n");
-    obj = bpf_object__open_file("capture.bpf.o", NULL);
+    /* 
+     * 尝试从多个位置查找 eBPF 对象文件
+     * 1. 当前目录（开发模式）
+     * 2. /usr/local/lib/（安装模式）
+     */
+    const char *bpf_paths[] = {
+        "capture.bpf.o",
+        "/usr/local/lib/capture.bpf.o",
+        NULL
+    };
+    
+    for (int i = 0; bpf_paths[i] != NULL; i++) {
+        obj = bpf_object__open_file(bpf_paths[i], NULL);
+        if (!libbpf_get_error(obj)) {
+            printf("Loaded eBPF program from: %s\n", bpf_paths[i]);
+            break;
+        }
+    }
+    
     if (libbpf_get_error(obj)) {
         fprintf(stderr, "Failed to open eBPF object file\n");
         err = -1;

@@ -28,9 +28,15 @@ int key_provider_init(enum key_provider_mode mode) {
             
         case MODE_OPENSSL:
             printf("Initializing OpenSSL key provider\n");
+#if OPENSSL_VERSION_NUMBER >= 0x10100000L
+            /* OpenSSL 1.1.0+ */
+            OPENSSL_init_ssl(OPENSSL_INIT_LOAD_SSL_STRINGS | OPENSSL_INIT_LOAD_CRYPTO_STRINGS, NULL);
+#else
+            /* OpenSSL 1.0.x */
             SSL_library_init();
             SSL_load_error_strings();
             OpenSSL_add_all_algorithms();
+#endif
             ssl_ctx = SSL_CTX_new(TLS_method());
             if (!ssl_ctx) {
                 fprintf(stderr, "Failed to create SSL context\n");
@@ -40,8 +46,12 @@ int key_provider_init(enum key_provider_mode mode) {
             
         case MODE_BORINGSSL:
             printf("Initializing BoringSSL key provider\n");
-            /* BoringSSL 初始化（与 OpenSSL 类似） */
+            /* BoringSSL 初始化 */
+#if OPENSSL_VERSION_NUMBER >= 0x10100000L
+            OPENSSL_init_ssl(OPENSSL_INIT_LOAD_SSL_STRINGS | OPENSSL_INIT_LOAD_CRYPTO_STRINGS, NULL);
+#else
             SSL_library_init();
+#endif
             ssl_ctx = SSL_CTX_new(TLS_method());
             if (!ssl_ctx) {
                 fprintf(stderr, "Failed to create SSL context\n");
@@ -70,7 +80,10 @@ void key_provider_cleanup(void) {
                 SSL_CTX_free(ssl_ctx);
                 ssl_ctx = NULL;
             }
+#if OPENSSL_VERSION_NUMBER < 0x10100000L
+            /* Only needed for OpenSSL 1.0.x */
             EVP_cleanup();
+#endif
             break;
     }
     
@@ -160,18 +173,18 @@ static int openssl_get_key(struct flow_tuple *tuple, struct tls_key_info *key_in
     /* 这里是简化的实现，实际需要建立完整的 TLS 连接 */
     /* 生成密钥材料（示例） */
     ret = SSL_export_keying_material(ssl, key_material, sizeof(key_material),
-                                      "EXPORTER-dtls_srtp", 17, NULL, 0, 0);
+                                      "EXPORTER-TLS-Key", 16, NULL, 0, 0);
     if (ret != 1) {
         fprintf(stderr, "Failed to export keying material\n");
         SSL_free(ssl);
         return -1;
     }
     
-    /* 填充密钥信息 */
-    memcpy(key_info->key, key_material, 32);
-    memcpy(key_info->iv, key_material + 32, 16);
-    key_info->key_len = 32;
-    key_info->iv_len = 16;
+    /* 填充密钥信息 - 使用正确的 AES-GCM-128 密钥长度 */
+    memcpy(key_info->key, key_material, 16);  /* AES-GCM-128: 16 bytes key */
+    memcpy(key_info->iv, key_material + 16, 12);  /* GCM IV: 12 bytes (includes 4-byte salt) */
+    key_info->key_len = 16;
+    key_info->iv_len = 12;
     
     SSL_free(ssl);
     printf("OpenSSL key negotiation completed\n");
