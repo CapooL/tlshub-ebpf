@@ -8,12 +8,52 @@
 #include <linux/if_ether.h>
 #include <linux/ip.h>
 #include <linux/tcp.h>
-#include <linux/udp.h>
 #include <linux/in.h>
+#include <linux/types.h>
 #include <bpf/bpf_helpers.h>
 #include <bpf/bpf_endian.h>
 
-#include "../include/tlshub_common.h"
+#define MAX_PACKET_SIZE 1500
+#define MAX_PAYLOAD_SIZE 512
+
+/* 事件类型定义 */
+#define EVENT_PACKET_CAPTURE 1
+#define EVENT_TLS_HANDSHAKE 2
+#define EVENT_CONNECTION_NEW 3
+#define EVENT_CONNECTION_CLOSE 4
+
+/* 数据包方向 */
+#define DIR_INGRESS 0
+#define DIR_EGRESS 1
+
+/* 数据包信息结构 */
+struct packet_info {
+    __u32 saddr;          /* 源 IP 地址 */
+    __u32 daddr;          /* 目的 IP 地址 */
+    __u16 sport;          /* 源端口 */
+    __u16 dport;          /* 目的端口 */
+    __u8 protocol;        /* 协议类型 */
+    __u8 direction;       /* 数据包方向 */
+    __u16 payload_len;    /* 载荷长度 */
+} __attribute__((packed));
+
+/* eBPF 事件数据结构 */
+struct event_data {
+    __u64 timestamp;                    /* 时间戳 */
+    __u32 event_type;                   /* 事件类型 */
+    __u32 pid;                          /* 进程 ID */
+    struct packet_info pkt_info;        /* 数据包信息 */
+    __u8 payload[MAX_PAYLOAD_SIZE];     /* 载荷数据 */
+} __attribute__((packed));
+
+/* 统计信息结构 */
+struct stats_info {
+    __u64 rx_packets;    /* 接收的数据包数 */
+    __u64 tx_packets;    /* 发送的数据包数 */
+    __u64 rx_bytes;      /* 接收的字节数 */
+    __u64 tx_bytes;      /* 发送的字节数 */
+    __u64 dropped;       /* 丢弃的数据包数 */
+} __attribute__((packed));
 
 /* BPF Maps 定义 */
 
@@ -155,7 +195,7 @@ int xdp_packet_capture(struct xdp_md *ctx)
     event.pkt_info.payload_len = payload_size;
     
     if (payload_size > 0 && payload + payload_size <= data_end) {
-        bpf_probe_read_kernel(&event.payload, payload_size, payload);
+        bpf_probe_read_kernel(&event.payload, payload_size & (MAX_PAYLOAD_SIZE - 1), payload);
         
         /* 检查是否为 TLS 握手包（Client Hello: 0x16 0x03）*/
         if (payload_size >= 2 && event.payload[0] == 0x16 && 
@@ -224,7 +264,7 @@ int tc_packet_capture(struct __sk_buff *skb)
     event.pkt_info.payload_len = payload_size;
     
     if (payload_size > 0 && payload + payload_size <= data_end) {
-        bpf_probe_read_kernel(&event.payload, payload_size, payload);
+        bpf_probe_read_kernel(&event.payload, payload_size & (MAX_PAYLOAD_SIZE - 1), payload);
     }
     
     /* 更新统计信息 */
