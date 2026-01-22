@@ -105,17 +105,17 @@ int kprobe_tcp_sendmsg(struct pt_regs *ctx) {
     
     /* 读取 socket 信息 */
     __u16 family;
-    bpf_probe_read(&family, sizeof(family), &sk->__sk_common.skc_family);
+    bpf_probe_read_kernel(&family, sizeof(family), &sk->__sk_common.skc_family);
     
     if (family != AF_INET) {
         return 0;  /* 只处理 IPv4 */
     }
     
     /* 读取四元组信息 */
-    bpf_probe_read(&info.saddr, sizeof(info.saddr), &sk->__sk_common.skc_rcv_saddr);
-    bpf_probe_read(&info.daddr, sizeof(info.daddr), &sk->__sk_common.skc_daddr);
-    bpf_probe_read(&info.sport, sizeof(info.sport), &sk->__sk_common.skc_num);
-    bpf_probe_read(&info.dport, sizeof(info.dport), &sk->__sk_common.skc_dport);
+    bpf_probe_read_kernel(&info.saddr, sizeof(info.saddr), &sk->__sk_common.skc_rcv_saddr);
+    bpf_probe_read_kernel(&info.daddr, sizeof(info.daddr), &sk->__sk_common.skc_daddr);
+    bpf_probe_read_kernel(&info.sport, sizeof(info.sport), &sk->__sk_common.skc_num);
+    bpf_probe_read_kernel(&info.dport, sizeof(info.dport), &sk->__sk_common.skc_dport);
     info.dport = bpf_ntohs(info.dport);
     info.pid = bpf_get_current_pid_tgid() >> 32;
     

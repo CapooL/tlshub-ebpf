@@ -208,16 +208,18 @@ int main(int argc, char **argv) {
         NULL
     };
     
+    obj = NULL;
     for (int i = 0; bpf_paths[i] != NULL; i++) {
         obj = bpf_object__open_file(bpf_paths[i], NULL);
         if (!libbpf_get_error(obj)) {
             printf("Loaded eBPF program from: %s\n", bpf_paths[i]);
             break;
         }
+        obj = NULL;  /* Reset for next iteration */
     }
     
-    if (libbpf_get_error(obj)) {
-        fprintf(stderr, "Failed to open eBPF object file\n");
+    if (!obj || libbpf_get_error(obj)) {
+        fprintf(stderr, "Failed to open eBPF object file from any location\n");
         err = -1;
         goto cleanup;
     }

@@ -152,6 +152,14 @@ enum key_provider_mode key_provider_get_mode(void) {
 
 /**
  * OpenSSL 密钥协商函数
+ * 
+ * 注意：这是简化实现，用于演示目的
+ * 实际生产环境应该建立完整的 TLS 连接并协商密钥
+ * 
+ * Exporter 标签说明：
+ * - 使用自定义标签 "EXPORTER-TLS-Capture" 
+ * - 如果与 TLSHub 集成，应确保使用相同的标签
+ * - 标准 RFC 5705 定义的标签可用于互操作性
  */
 static int openssl_get_key(struct flow_tuple *tuple, struct tls_key_info *key_info) {
     SSL *ssl = NULL;
@@ -171,9 +179,13 @@ static int openssl_get_key(struct flow_tuple *tuple, struct tls_key_info *key_in
     }
     
     /* 这里是简化的实现，实际需要建立完整的 TLS 连接 */
-    /* 生成密钥材料（示例） */
+    /* 
+     * 生成密钥材料
+     * 使用 RFC 5705 定义的 exporter 机制
+     * 标签应与 TLSHub 模块保持一致
+     */
     ret = SSL_export_keying_material(ssl, key_material, sizeof(key_material),
-                                      "EXPORTER-TLS-Key", 16, NULL, 0, 0);
+                                      "EXPORTER-TLS-Capture", 21, NULL, 0, 0);
     if (ret != 1) {
         fprintf(stderr, "Failed to export keying material\n");
         SSL_free(ssl);
