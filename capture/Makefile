@@ -11,7 +11,7 @@ SRCS = src/main.c src/pod_mapping.c src/tlshub_client.c src/ktls_config.c src/ke
 OBJS = $(SRCS:.c=.o)
 
 # eBPF 编译选项
-BPF_CFLAGS = -target bpf -D__TARGET_ARCH_x86_64 -O2 -g -Wall
+BPF_CFLAGS = -target bpf -D__TARGET_ARCH_x86_64 -O2 -g -Wall -I/usr/include/x86_64-linux-gnu
 
 .PHONY: all clean install
 
