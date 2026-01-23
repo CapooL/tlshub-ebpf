@@ -48,13 +48,20 @@ TLShub 的 Layer 4 友好性测试仓库，包含配套的流量捕获模块。
 ├── docs/                # 完整中文文档
 │   ├── TLSHUB_API_CN.md        # API 详细文档
 │   └── INTEGRATION_GUIDE_CN.md # 集成指南
-└── capture/             # 流量捕获模块
+├── capture/             # 流量捕获模块
+│   ├── include/         # 头文件
+│   ├── src/             # 源代码（包括 eBPF 程序）
+│   ├── config/          # 配置文件
+│   ├── test/            # 测试文件
+│   ├── docs/            # 详细文档
+│   └── Makefile         # 编译配置
+└── bench/               # Layer 7 性能测试工具
     ├── include/         # 头文件
-    ├── src/             # 源代码（包括 eBPF 程序）
-    ├── config/          # 配置文件
-    ├── test/            # 测试文件
-    ├── docs/            # 详细文档
-    └── Makefile         # 编译配置
+    ├── src/             # 源代码
+    ├── config/          # 示例配置
+    ├── test_bench.sh    # 测试脚本
+    ├── Makefile         # 编译配置
+    └── README.md        # 详细使用说明
 ```
 
 ## 快速开始
@@ -129,6 +136,38 @@ sudo ./capture /path/to/custom/capture.conf
 
 - [docs/PERFORMANCE_METRICS_CN.md](docs/PERFORMANCE_METRICS_CN.md) - 性能指标监测文档
 - [docs/TLS_PERF_ANALYSIS_CN.md](docs/TLS_PERF_ANALYSIS_CN.md) - TLS-Perf 工具分析与测试方案
+
+### Layer 7 性能测试工具
+
+本项目提供了 `tlshub_bench` 工具用于 Layer 7（应用层）性能测试：
+
+```bash
+cd bench/
+make
+./tlshub_bench --help
+```
+
+详细文档：[bench/README.md](bench/README.md)
+
+#### 快速开始
+
+```bash
+# 启动 echo server
+./tlshub_bench --mode server --listen-port 9090
+
+# 在另一个终端运行客户端测试
+./tlshub_bench --mode client \
+  --target-ip 127.0.0.1 \
+  --target-port 9090 \
+  --data-size 4096 \
+  --total-connections 100
+```
+
+测试完成后会生成 JSON 和 CSV 格式的性能报告，包含：
+- 连接建立延迟
+- 吞吐量
+- CPU 使用率
+- 内存使用量
 
 ## 测试
 

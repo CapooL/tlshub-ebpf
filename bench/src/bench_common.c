@@ -34,15 +34,14 @@ void init_config(bench_config_t *config) {
 void print_config(const bench_config_t *config) {
     printf("=== TLShub Benchmark Configuration ===\n");
     printf("Mode: %s\n", 
-           config->mode == MODE_CLIENT ? "Client" :
-           config->mode == MODE_SERVER ? "Server" : "Both");
-    if (config->mode == MODE_CLIENT || config->mode == MODE_BOTH) {
+           config->mode == MODE_CLIENT ? "Client" : "Server");
+    if (config->mode == MODE_CLIENT) {
         printf("Target: %s:%u\n", config->target_ip, config->target_port);
         printf("Data Size: %zu bytes\n", config->data_size);
-        printf("Concurrency: %d\n", config->concurrency);
+        printf("Concurrency: %d (sequential execution)\n", config->concurrency);
         printf("Total Connections: %d\n", config->total_connections);
     }
-    if (config->mode == MODE_SERVER || config->mode == MODE_BOTH) {
+    if (config->mode == MODE_SERVER) {
         printf("Listen Port: %u\n", config->listen_port);
     }
     printf("Output JSON: %s\n", config->output_json);

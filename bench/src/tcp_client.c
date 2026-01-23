@@ -259,10 +259,12 @@ int run_tcp_client(const bench_config_t *config, global_metrics_t *metrics,
     printf("Target: %s:%u\n", config->target_ip, config->target_port);
     printf("Total connections: %d\n", total_conns);
     printf("Data size: %zu bytes\n", config->data_size);
-    printf("Concurrency: %d\n\n", config->concurrency);
+    printf("Concurrency: %d (note: sequential execution in current version)\n\n", 
+           config->concurrency);
     
-    // For simplicity, run connections sequentially
-    // TODO: Implement true concurrent connections using threads/processes
+    // Note: Current implementation runs connections sequentially for simplicity
+    // and reliability. True concurrent execution can be added in future versions
+    // using threads (pthread) or asynchronous I/O (epoll).
     for (int i = 0; i < total_conns; i++) {
         conn_stats_t *stats = &conn_stats_array[i];
         memset(stats, 0, sizeof(conn_stats_t));
@@ -284,9 +286,7 @@ int run_tcp_client(const bench_config_t *config, global_metrics_t *metrics,
         }
         
         // Small delay between connections to avoid overwhelming the system
-        if (config->concurrency == 1) {
-            usleep(10000); // 10ms delay
-        }
+        usleep(10000); // 10ms delay
     }
     
     printf("\nClient benchmark completed.\n");

@@ -11,12 +11,14 @@ void print_usage(const char *program_name) {
     printf("TLShub Benchmark Tool - Layer 7 Traffic Simulator\n\n");
     printf("Usage: %s [OPTIONS]\n\n", program_name);
     printf("Options:\n");
-    printf("  -m, --mode MODE           Operating mode: client, server, or both (default: client)\n");
+    printf("  -m, --mode MODE           Operating mode: client or server (default: client)\n");
     printf("  -t, --target-ip IP        Target server IP address (default: 127.0.0.1)\n");
     printf("  -p, --target-port PORT    Target server port (default: 8080)\n");
     printf("  -l, --listen-port PORT    Echo server listen port (default: 9090)\n");
     printf("  -s, --data-size SIZE      Data size to send in bytes (default: 1024)\n");
     printf("  -c, --concurrency NUM     Number of concurrent connections (default: 1)\n");
+    printf("                            Note: Currently used for planning; actual execution\n");
+    printf("                            is sequential. True concurrency in future versions.\n");
     printf("  -n, --total-connections NUM  Total number of connections (default: 10)\n");
     printf("  -j, --json FILE           Output JSON file (default: bench_metrics_<timestamp>.json)\n");
     printf("  -o, --csv FILE            Output CSV file (default: bench_metrics_<timestamp>.csv)\n");
@@ -28,8 +30,11 @@ void print_usage(const char *program_name) {
     printf("  # Run client test\n");
     printf("  %s --mode client --target-ip 127.0.0.1 --target-port 9090 \\\n", program_name);
     printf("    --data-size 4096 --total-connections 100\n\n");
-    printf("  # Run both server and client (separate terminal recommended for server)\n");
-    printf("  %s --mode both --listen-port 9090 --target-port 9090\n\n", program_name);
+    printf("  # Run server and client in separate terminals\n");
+    printf("  # Terminal 1:\n");
+    printf("  %s --mode server --listen-port 9090\n", program_name);
+    printf("  # Terminal 2:\n");
+    printf("  %s --mode client --target-port 9090\n\n", program_name);
     printf("Integration with TLShub:\n");
     printf("  1. Ensure TLShub kernel module is loaded\n");
     printf("  2. Configure TLShub to intercept traffic to target IP:port\n");
@@ -43,9 +48,9 @@ int parse_mode(const char *mode_str) {
         return MODE_CLIENT;
     } else if (strcmp(mode_str, "server") == 0) {
         return MODE_SERVER;
-    } else if (strcmp(mode_str, "both") == 0) {
-        return MODE_BOTH;
     }
+    // Note: MODE_BOTH removed as it's not yet implemented
+    // It would require running server and client in the same process
     return -1;
 }
 
@@ -198,9 +203,10 @@ int main(int argc, char *argv[]) {
         }
         
         free(conn_stats_array);
-    } else if (config.mode == MODE_BOTH) {
-        printf("Running in 'both' mode is not yet fully implemented.\n");
-        printf("Please run server and client in separate terminals:\n");
+    } else {
+        // MODE_BOTH is not implemented yet
+        printf("Invalid mode. Use --mode client or --mode server\n");
+        printf("Run server and client in separate terminals:\n");
         printf("  Terminal 1: %s --mode server --listen-port %u\n", 
                argv[0], config.listen_port);
         printf("  Terminal 2: %s --mode client --target-port %u\n",

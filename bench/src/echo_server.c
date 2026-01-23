@@ -134,6 +134,7 @@ int run_echo_server(const bench_config_t *config) {
     
     printf("=== TLShub Echo Server ===\n");
     printf("Listen Port: %u\n", config->listen_port);
+    printf("Note: Handles clients serially (one at a time)\n");
     printf("Press Ctrl+C to stop\n\n");
     
     // Start server
@@ -143,6 +144,9 @@ int run_echo_server(const bench_config_t *config) {
     }
     
     // Accept and handle connections
+    // Note: Current implementation handles clients serially for simplicity.
+    // For production use with high concurrency, consider using fork() or
+    // pthread to handle multiple clients simultaneously.
     while (keep_running) {
         addr_len = sizeof(client_addr);
         client_fd = accept(server_fd, (struct sockaddr *)&client_addr, &addr_len);
@@ -155,8 +159,7 @@ int run_echo_server(const bench_config_t *config) {
             break;
         }
         
-        // Handle client (for now, handle serially)
-        // TODO: Fork or use threads for concurrent handling
+        // Handle client (serially)
         echo_server_handle_client(client_fd);
     }
     

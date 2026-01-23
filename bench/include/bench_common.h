@@ -17,8 +17,7 @@
 // Test modes
 typedef enum {
     MODE_CLIENT = 0,
-    MODE_SERVER = 1,
-    MODE_BOTH = 2
+    MODE_SERVER = 1
 } bench_mode_t;
 
 // Connection state
