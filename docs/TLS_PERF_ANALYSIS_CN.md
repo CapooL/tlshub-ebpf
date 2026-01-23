@@ -929,59 +929,57 @@ XXX
 
 ### 8.2 简单测试脚本（临时方案）
 
-如果需要快速验证，可以先使用简单脚本：
+如果需要快速验证，可以先使用简单脚本。
+
+**我们已经提供了一个现成的快速测试脚本**：`docs/tlshub_quick_test.sh`
+
+#### 使用方法
 
 ```bash
-#!/bin/bash
-# quick_test.sh - TLShub 快速性能测试
+# 进入 docs 目录
+cd docs/
 
-CLIENT_IP="10.0.1.100"
-SERVER_IP="10.0.2.100"
-N_TESTS=100
+# 运行测试（需要 root 权限）
+sudo ./tlshub_quick_test.sh <客户端IP> <服务端IP> [测试次数]
 
-echo "开始 TLShub 握手性能测试..."
-echo "测试次数: $N_TESTS"
-
-success=0
-failed=0
-total_time=0
-
-for i in $(seq 1 $N_TESTS); do
-    client_port=$((10000 + RANDOM % 50000))
-    server_port=443
-    
-    start=$(date +%s%N)
-    
-    # 调用测试程序
-    ./tlshub_handshake_test $CLIENT_IP $SERVER_IP \
-        $client_port $server_port > /dev/null 2>&1
-    
-    ret=$?
-    end=$(date +%s%N)
-    
-    if [ $ret -eq 0 ]; then
-        ((success++))
-        elapsed=$(( (end - start) / 1000000 ))  # 转换为毫秒
-        total_time=$((total_time + elapsed))
-        echo "[$i/$N_TESTS] 成功 (${elapsed}ms)"
-    else
-        ((failed++))
-        echo "[$i/$N_TESTS] 失败"
-    fi
-done
-
-echo "========================================"
-echo "测试完成"
-echo "总次数: $N_TESTS"
-echo "成功: $success"
-echo "失败: $failed"
-echo "成功率: $(echo "scale=2; $success * 100 / $N_TESTS" | bc)%"
-if [ $success -gt 0 ]; then
-    avg_time=$(($total_time / $success))
-    echo "平均延迟: ${avg_time}ms"
-fi
-echo "========================================"
+# 示例：测试 100 次握手
+sudo ./tlshub_quick_test.sh 10.0.1.100 10.0.2.100 100
 ```
+
+#### 输出示例
+
+```
+========================================
+TLShub 快速性能测试
+========================================
+客户端 IP: 10.0.1.100
+服务端 IP: 10.0.2.100
+测试次数:  100
+========================================
+
+开始测试...
+[100/100] 成功: 98, 失败: 2, 最后延迟: 7 ms
+
+========================================
+测试完成
+========================================
+总测试次数: 100
+成功次数:   98
+失败次数:   2
+成功率:     98.00%
+
+延迟统计 (毫秒):
+  最小延迟: 3
+  平均延迟: 7.123
+  最大延迟: 15
+  P95 延迟: 12
+  P99 延迟: 14
+
+吞吐量:     13.74 握手/秒
+========================================
+```
+
+**注意**: 这个脚本仅用于快速验证，不适合正式的性能测试。正式测试请使用专门的 `tlshub-perf` 工具。
 
 ---
 
