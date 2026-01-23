@@ -125,6 +125,11 @@ sudo ./capture /path/to/custom/capture.conf
 - [ARCHITECTURE.md](capture/docs/ARCHITECTURE.md) - 架构设计文档
 - [API.md](capture/docs/API.md) - API 参考文档
 
+### 性能测试文档
+
+- [docs/PERFORMANCE_METRICS_CN.md](docs/PERFORMANCE_METRICS_CN.md) - 性能指标监测文档
+- [docs/TLS_PERF_ANALYSIS_CN.md](docs/TLS_PERF_ANALYSIS_CN.md) - TLS-Perf 工具分析与测试方案
+
 ## 测试
 
 ```bash
