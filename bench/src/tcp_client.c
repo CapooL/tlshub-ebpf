@@ -76,9 +76,13 @@ int tcp_client_send_data(int sockfd, size_t data_size, conn_stats_t *stats) {
         return -1;
     }
     
-    // Fill buffer with predictable pattern
-    for (size_t i = 0; i < data_size; i++) {
-        buffer[i] = (char)(i % 256);
+    // Fill buffer with predictable pattern efficiently
+    if (data_size > 0) {
+        memset(buffer, 0xAA, data_size);  // Fill with pattern 0xAA
+        // Optionally add some variation
+        for (size_t i = 0; i < data_size && i < 256; i++) {
+            buffer[i] = (char)(i % 256);
+        }
     }
     
     // Send data
@@ -163,16 +167,25 @@ int tcp_client_receive_data(int sockfd, conn_stats_t *stats) {
 // Close connection properly with FIN (not RST)
 int tcp_client_close(int sockfd, conn_stats_t *stats) {
     struct timespec close_start, close_end;
+    struct timeval timeout;
     
     stats->state = CONN_STATE_CLOSING;
     clock_gettime(CLOCK_MONOTONIC, &close_start);
     
+    // Set receive timeout to prevent indefinite blocking
+    timeout.tv_sec = 5;
+    timeout.tv_usec = 0;
+    setsockopt(sockfd, SOL_SOCKET, SO_RCVTIMEO, &timeout, sizeof(timeout));
+    
     // Shutdown write side to send FIN
     if (shutdown(sockfd, SHUT_WR) < 0) {
-        perror("shutdown failed");
+        // Log but continue - socket may already be in error state
+        if (errno != ENOTCONN) {
+            perror("shutdown failed");
+        }
     }
     
-    // Wait for server to close (read until EOF)
+    // Wait for server to close (read until EOF or timeout)
     char buf[1024];
     while (recv(sockfd, buf, sizeof(buf), 0) > 0) {
         // Drain any remaining data

@@ -24,10 +24,11 @@ void init_config(bench_config_t *config) {
     config->concurrency = DEFAULT_CONCURRENCY;
     config->total_connections = DEFAULT_TOTAL_CONNECTIONS;
     config->verbose = false;
+    // Use timestamp + PID to avoid filename conflicts
     snprintf(config->output_json, sizeof(config->output_json), 
-             "bench_metrics_%ld.json", (long)time(NULL));
+             "bench_metrics_%ld_%d.json", (long)time(NULL), getpid());
     snprintf(config->output_csv, sizeof(config->output_csv),
-             "bench_metrics_%ld.csv", (long)time(NULL));
+             "bench_metrics_%ld_%d.csv", (long)time(NULL), getpid());
 }
 
 // Print configuration
@@ -231,7 +232,7 @@ void get_cpu_usage(double *cpu_percent) {
     unsigned long long user, nice, system, idle, iowait, irq, softirq, steal;
     char cpu_label[16];
     
-    if (fscanf(fp, "%s %llu %llu %llu %llu %llu %llu %llu %llu",
+    if (fscanf(fp, "%15s %llu %llu %llu %llu %llu %llu %llu %llu",
                cpu_label, &user, &nice, &system, &idle, &iowait, &irq, &softirq, &steal) != 9) {
         fclose(fp);
         *cpu_percent = 0.0;
