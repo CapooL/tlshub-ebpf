@@ -31,9 +31,11 @@ if [ "$EUID" -ne 0 ]; then
 fi
 
 # 检查 capture 程序是否存在
-if [ ! -f "./capture" ]; then
+if [ ! -f "../capture" ]; then
     echo -e "${RED}错误: 找不到 capture 程序${NC}"
-    echo "请先运行 'make' 编译程序"
+    echo "请先在 capture 目录运行 'make' 编译程序"
+    echo "当前位置: $(pwd)"
+    echo "预期路径: ../capture"
     exit 1
 fi
 
@@ -56,6 +58,12 @@ run_test() {
     echo -e "${YELLOW}测试模式: $mode_name${NC}"
     echo -e "${YELLOW}========================================${NC}"
     
+    # 确保配置目录存在
+    if [ ! -d "$(dirname "$CONFIG_FILE")" ]; then
+        echo "创建配置目录: $(dirname "$CONFIG_FILE")"
+        sudo mkdir -p "$(dirname "$CONFIG_FILE")"
+    fi
+    
     # 创建配置文件
     cat > "$CONFIG_FILE" <<EOF
 # TLShub Capture Configuration
@@ -70,7 +78,7 @@ EOF
     
     # 启动 capture 程序
     echo "启动 capture 程序 (运行 ${TEST_DURATION} 秒)..."
-    timeout ${TEST_DURATION}s ./capture "$CONFIG_FILE" &
+    timeout ${TEST_DURATION}s ../capture "$CONFIG_FILE" &
     CAPTURE_PID=$!
     
     # 等待程序启动
@@ -132,7 +140,13 @@ while true; do
             ;;
         5)
             read -p "请输入测试时长（秒）: " TEST_DURATION
-            echo "测试时长已设置为 ${TEST_DURATION} 秒"
+            # 验证输入是否为正整数
+            if ! [[ "$TEST_DURATION" =~ ^[0-9]+$ ]] || [ "$TEST_DURATION" -le 0 ] || [ "$TEST_DURATION" -gt 86400 ]; then
+                echo -e "${RED}错误: 请输入有效的测试时长（1-86400秒）${NC}"
+                TEST_DURATION=60  # 恢复默认值
+            else
+                echo "测试时长已设置为 ${TEST_DURATION} 秒"
+            fi
             ;;
         6)
             echo "退出测试工具"

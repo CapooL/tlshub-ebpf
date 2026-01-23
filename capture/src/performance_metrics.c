@@ -7,17 +7,6 @@
 #include <sys/time.h>
 #include "performance_metrics.h"
 
-/* CPU 和内存监控相关 */
-struct cpu_stat {
-    unsigned long long user;
-    unsigned long long nice;
-    unsigned long long system;
-    unsigned long long idle;
-    unsigned long long iowait;
-    unsigned long long irq;
-    unsigned long long softirq;
-};
-
 /**
  * 读取 /proc/stat 获取 CPU 统计信息
  */
@@ -124,6 +113,10 @@ struct perf_metrics_ctx* perf_metrics_init(__u32 max_connections) {
     memset(&ctx->stats, 0, sizeof(struct performance_stats));
     ctx->stats.min_connection_latency_ms = 999999.0;
     ctx->stats.min_key_negotiation_ms = 999999.0;
+    
+    /* 初始化 CPU 监控状态 */
+    memset(&ctx->prev_cpu_stat, 0, sizeof(struct cpu_stat));
+    ctx->cpu_first_call = 1;
     
     /* 记录开始时间 */
     clock_gettime(CLOCK_MONOTONIC, &ctx->start_time);
@@ -277,11 +270,12 @@ void perf_metrics_record_data_transfer(struct perf_metrics_ctx *ctx, int conn_in
     /* 更新最后数据包时间 */
     clock_gettime(CLOCK_MONOTONIC, &cm->last_data_time);
     
-    /* 计算吞吐量 */
+    /* 计算吞吐量（仅在有足够时间间隔时计算） */
     __u64 total_bytes = cm->bytes_sent + cm->bytes_received;
     __u64 time_diff_ns = perf_time_diff_ns(&cm->first_data_time, &cm->last_data_time);
     
-    if (time_diff_ns > 0) {
+    /* 要求至少有 100ms 的时间间隔以获得有意义的吞吐量测量 */
+    if (time_diff_ns > 100000000ULL) {  /* 100ms in nanoseconds */
         /* 吞吐量 (Mbps) = (字节数 * 8) / (时间(秒) * 1000000) */
         double time_seconds = (double)time_diff_ns / 1000000000.0;
         cm->throughput_mbps = ((double)total_bytes * 8.0) / (time_seconds * 1000000.0);
@@ -312,8 +306,6 @@ void perf_metrics_connection_end(struct perf_metrics_ctx *ctx, int conn_index, i
  * 更新系统性能指标
  */
 int perf_metrics_update_system(struct perf_metrics_ctx *ctx) {
-    static struct cpu_stat prev_cpu_stat = {0};
-    static int first_call = 1;
     struct cpu_stat curr_cpu_stat;
     __u64 rss_kb, vms_kb;
     
@@ -328,13 +320,18 @@ int perf_metrics_update_system(struct perf_metrics_ctx *ctx) {
     }
     
     /* 计算 CPU 使用率（第一次调用时跳过） */
-    if (!first_call) {
-        ctx->system_metrics.cpu_usage_percent = calculate_cpu_usage(&prev_cpu_stat, &curr_cpu_stat);
+    if (!ctx->cpu_first_call) {
+        ctx->system_metrics.cpu_usage_percent = calculate_cpu_usage(&ctx->prev_cpu_stat, &curr_cpu_stat);
+        
+        /* 更新峰值 CPU */
+        if (ctx->system_metrics.cpu_usage_percent > ctx->stats.peak_cpu_usage) {
+            ctx->stats.peak_cpu_usage = ctx->system_metrics.cpu_usage_percent;
+        }
     } else {
-        first_call = 0;
+        ctx->cpu_first_call = 0;
         ctx->system_metrics.cpu_usage_percent = 0.0;
     }
-    prev_cpu_stat = curr_cpu_stat;
+    ctx->prev_cpu_stat = curr_cpu_stat;
     
     /* 读取内存使用情况 */
     if (read_memory_usage(&rss_kb, &vms_kb) < 0) {
@@ -345,6 +342,11 @@ int perf_metrics_update_system(struct perf_metrics_ctx *ctx) {
     ctx->system_metrics.memory_rss_kb = rss_kb;
     ctx->system_metrics.memory_vms_kb = vms_kb;
     ctx->system_metrics.memory_usage_kb = rss_kb;  /* 使用 RSS 作为主要内存指标 */
+    
+    /* 更新峰值内存 */
+    if (rss_kb > ctx->stats.peak_memory_usage_kb) {
+        ctx->stats.peak_memory_usage_kb = rss_kb;
+    }
     
     /* 记录测量时间 */
     clock_gettime(CLOCK_MONOTONIC, &ctx->system_metrics.measurement_time);
@@ -357,7 +359,8 @@ int perf_metrics_update_system(struct perf_metrics_ctx *ctx) {
  */
 void perf_metrics_calculate_stats(struct perf_metrics_ctx *ctx) {
     __u32 i;
-    __u32 valid_connections = 0;
+    __u32 latency_count = 0;
+    __u32 negotiation_count = 0;
     double total_connection_latency = 0.0;
     double total_key_negotiation = 0.0;
     double total_throughput = 0.0;
@@ -384,6 +387,7 @@ void perf_metrics_calculate_stats(struct perf_metrics_ctx *ctx) {
         if (cm->connection_latency.duration_ns > 0) {
             latency_ms = perf_ns_to_ms(cm->connection_latency.duration_ns);
             total_connection_latency += latency_ms;
+            latency_count++;
             
             if (latency_ms < ctx->stats.min_connection_latency_ms) {
                 ctx->stats.min_connection_latency_ms = latency_ms;
@@ -397,6 +401,7 @@ void perf_metrics_calculate_stats(struct perf_metrics_ctx *ctx) {
         if (cm->key_negotiation.duration_ns > 0) {
             negotiation_ms = perf_ns_to_ms(cm->key_negotiation.duration_ns);
             total_key_negotiation += negotiation_ms;
+            negotiation_count++;
             
             if (negotiation_ms < ctx->stats.min_key_negotiation_ms) {
                 ctx->stats.min_key_negotiation_ms = negotiation_ms;
@@ -418,14 +423,21 @@ void perf_metrics_calculate_stats(struct perf_metrics_ctx *ctx) {
         
         /* 累计传输字节数 */
         ctx->stats.total_bytes_transferred += cm->bytes_sent + cm->bytes_received;
-        
-        valid_connections++;
     }
     
-    /* 计算平均值 */
-    if (valid_connections > 0) {
-        ctx->stats.avg_connection_latency_ms = total_connection_latency / valid_connections;
-        ctx->stats.avg_key_negotiation_ms = total_key_negotiation / valid_connections;
+    /* 计算平均值 - 仅使用有效测量 */
+    if (latency_count > 0) {
+        ctx->stats.avg_connection_latency_ms = total_connection_latency / latency_count;
+    } else {
+        /* 没有有效测量时，重置 min 值为 0 */
+        ctx->stats.min_connection_latency_ms = 0.0;
+    }
+    
+    if (negotiation_count > 0) {
+        ctx->stats.avg_key_negotiation_ms = total_key_negotiation / negotiation_count;
+    } else {
+        /* 没有有效测量时，重置 min 值为 0 */
+        ctx->stats.min_key_negotiation_ms = 0.0;
     }
     
     if (throughput_samples > 0) {
@@ -434,9 +446,9 @@ void perf_metrics_calculate_stats(struct perf_metrics_ctx *ctx) {
     
     /* CPU 和内存统计 */
     ctx->stats.avg_cpu_usage = ctx->system_metrics.cpu_usage_percent;
-    ctx->stats.peak_cpu_usage = ctx->system_metrics.cpu_usage_percent;
+    /* peak_cpu_usage 已在 perf_metrics_update_system 中更新 */
     ctx->stats.avg_memory_usage_kb = ctx->system_metrics.memory_usage_kb;
-    ctx->stats.peak_memory_usage_kb = ctx->system_metrics.memory_usage_kb;
+    /* peak_memory_usage_kb 已在 perf_metrics_update_system 中更新 */
 }
 
 /**

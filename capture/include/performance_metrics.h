@@ -71,6 +71,17 @@ struct performance_stats {
     __u64 peak_memory_usage_kb;
 };
 
+/* CPU 统计信息（用于计算使用率） */
+struct cpu_stat {
+    unsigned long long user;
+    unsigned long long nice;
+    unsigned long long system;
+    unsigned long long idle;
+    unsigned long long iowait;
+    unsigned long long irq;
+    unsigned long long softirq;
+};
+
 /* 性能指标上下文 */
 struct perf_metrics_ctx {
     struct connection_metrics *conn_metrics;  /* 连接指标数组 */
@@ -82,6 +93,10 @@ struct perf_metrics_ctx {
     
     struct timespec start_time;               /* 监控开始时间 */
     int monitoring_enabled;                   /* 是否启用监控 */
+    
+    /* CPU 监控状态 */
+    struct cpu_stat prev_cpu_stat;            /* 上次 CPU 统计 */
+    int cpu_first_call;                       /* 是否第一次调用 */
 };
 
 /**
