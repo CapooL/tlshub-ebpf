@@ -150,12 +150,43 @@ sudo ./capture
 sudo ./capture
 ```
 
+### 性能指标测试
+
+本项目支持全面的性能指标收集和分析功能。
+
 建议测试的性能指标：
 - 连接建立延迟
 - 密钥协商时间
 - 吞吐量
 - CPU 使用率
 - 内存使用量
+
+#### 快速开始
+
+```bash
+# 启动 capture 程序（自动启用性能监测）
+sudo ./capture
+
+# 程序退出时会自动生成性能报告和数据文件
+# - perf_metrics_*.json (JSON 格式数据)
+# - perf_metrics_*.csv (CSV 格式数据)
+```
+
+#### 使用性能测试工具
+
+```bash
+cd capture/test/
+chmod +x perf_test.sh
+sudo ./perf_test.sh
+```
+
+性能测试工具支持：
+- 自动测试不同密钥提供者模式（TLShub、OpenSSL、BoringSSL）
+- 一键对比所有模式的性能
+- 自定义测试时长
+- 自动保存和整理测试结果
+
+详细文档请参考: [性能指标使用文档](docs/PERFORMANCE_METRICS_CN.md)
 
 ## 架构概览
 

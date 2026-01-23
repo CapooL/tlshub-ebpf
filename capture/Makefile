@@ -7,7 +7,7 @@ LDFLAGS = -lbpf -lssl -lcrypto
 # 目标文件
 TARGET = capture
 BPF_OBJ = capture.bpf.o
-SRCS = src/main.c src/pod_mapping.c src/tlshub_client.c src/ktls_config.c src/key_provider.c
+SRCS = src/main.c src/pod_mapping.c src/tlshub_client.c src/ktls_config.c src/key_provider.c src/performance_metrics.c
 OBJS = $(SRCS:.c=.o)
 
 # eBPF 编译选项

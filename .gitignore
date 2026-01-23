@@ -14,7 +14,15 @@
 
 # Test files
 test_pod_mapping
+example_metrics
 /tmp/
+
+# Performance metrics output files
+perf_metrics_*.json
+perf_metrics_*.csv
+example_metrics.json
+example_metrics.csv
+/capture/test/perf_results/
 
 # Dependencies
 node_modules/
