@@ -6,6 +6,7 @@
 #include <string.h>
 #include <getopt.h>
 #include <unistd.h>
+#include <inttypes.h>
 
 void print_usage(const char *program_name) {
     printf("TLShub Benchmark Tool - Layer 7 Traffic Simulator\n\n");
@@ -97,17 +98,31 @@ int main(int argc, char *argv[]) {
                 strncpy(config.target_ip, optarg, sizeof(config.target_ip) - 1);
                 break;
             case 'p':
-                config.target_port = atoi(optarg);
-                if (config.target_port == 0) {
-                    fprintf(stderr, "Invalid target port: %s\n", optarg);
-                    return EXIT_FAILURE;
+                {
+                    char *endptr = NULL;
+                    unsigned long port = strtoul(optarg, &endptr, 10);
+                    
+                    if (optarg[0] == '\0' || endptr == optarg || *endptr != '\0' ||
+                        port == 0 || port > 65535) {
+                        fprintf(stderr, "Invalid target port: %s (must be 1-65535)\n", optarg);
+                        return EXIT_FAILURE;
+                    }
+                    
+                    config.target_port = (uint16_t)port;
                 }
                 break;
             case 'l':
-                config.listen_port = atoi(optarg);
-                if (config.listen_port == 0) {
-                    fprintf(stderr, "Invalid listen port: %s\n", optarg);
-                    return EXIT_FAILURE;
+                {
+                    char *endptr = NULL;
+                    unsigned long port = strtoul(optarg, &endptr, 10);
+                    
+                    if (optarg[0] == '\0' || endptr == optarg || *endptr != '\0' ||
+                        port == 0 || port > 65535) {
+                        fprintf(stderr, "Invalid listen port: %s (must be 1-65535)\n", optarg);
+                        return EXIT_FAILURE;
+                    }
+                    
+                    config.listen_port = (uint16_t)port;
                 }
                 break;
             case 's':
@@ -180,8 +195,8 @@ int main(int argc, char *argv[]) {
         printf("Successful: %d\n", metrics.successful_connections);
         printf("Failed: %d\n", metrics.failed_connections);
         printf("Timeout: %d\n", metrics.timeout_connections);
-        printf("Total Bytes Sent: %lu\n", metrics.total_bytes_sent);
-        printf("Total Bytes Received: %lu\n", metrics.total_bytes_received);
+        printf("Total Bytes Sent: %" PRIu64 "\n", metrics.total_bytes_sent);
+        printf("Total Bytes Received: %" PRIu64 "\n", metrics.total_bytes_received);
         printf("Avg Connection Latency: %.3f ms\n", metrics.avg_connection_latency_ms);
         printf("Min Connection Latency: %.3f ms\n", metrics.min_connection_latency_ms);
         printf("Max Connection Latency: %.3f ms\n", metrics.max_connection_latency_ms);

@@ -9,6 +9,7 @@
 #include <netinet/tcp.h>
 #include <arpa/inet.h>
 #include <signal.h>
+#include <inttypes.h>
 
 static volatile int keep_running = 1;
 
@@ -122,7 +123,7 @@ void echo_server_handle_client(int client_fd) {
         }
     }
     
-    printf("Connection closed, total bytes echoed: %lu\n", total_bytes);
+    printf("Connection closed, total bytes echoed: %" PRIu64 "\n", total_bytes);
     
     // Shutdown and close
     shutdown(client_fd, SHUT_RDWR);

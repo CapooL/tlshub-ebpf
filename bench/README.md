@@ -64,7 +64,7 @@ sudo make install
 Usage: tlshub_bench [OPTIONS]
 
 Options:
-  -m, --mode MODE           运行模式: client, server, 或 both (默认: client)
+  -m, --mode MODE           运行模式: client 或 server (默认: client)
   -t, --target-ip IP        目标服务器 IP 地址 (默认: 127.0.0.1)
   -p, --target-port PORT    目标服务器端口 (默认: 8080)
   -l, --listen-port PORT    Echo server 监听端口 (默认: 9090)
@@ -412,7 +412,10 @@ sudo perf report
 
 ### Q: 如何解读密钥协商时间？
 
-**A:** 当前版本不直接测量密钥协商时间。这个指标需要通过 TLShub API 或内核日志获取。连接建立延迟包含了 TCP 握手和可能的 mTLS 握手时间。
+**A:** 当前版本不直接测量密钥协商时间。这个指标需要通过 TLShub API 或内核日志获取。连接建立延迟包含了 TCP 握手和可能的 mTLS 握手时间。如需精确测量密钥协商时间，可以通过以下方式：
+- 读取 TLShub 内核模块的日志（`dmesg | grep tlshub`）
+- 使用 capture 程序的性能指标输出
+- 通过 Netlink 事件监控握手过程
 
 ### Q: 支持 IPv6 吗？
 

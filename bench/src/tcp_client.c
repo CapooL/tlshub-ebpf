@@ -10,6 +10,7 @@
 #include <arpa/inet.h>
 #include <fcntl.h>
 #include <poll.h>
+#include <inttypes.h>
 
 // Connect to target server
 int tcp_client_connect(const char *target_ip, uint16_t target_port, 
@@ -136,7 +137,13 @@ int tcp_client_receive_data(int sockfd, conn_stats_t *stats) {
             stats->state = CONN_STATE_FAILED;
             return -1;
         } else if (poll_ret == 0) {
-            // Timeout - no more data
+            // Timeout - check if we received all expected data
+            if (stats->bytes_received < stats->bytes_sent) {
+                // Incomplete transfer - mark as timeout
+                stats->state = CONN_STATE_TIMEOUT;
+                return -1;
+            }
+            // No more data but we got everything
             break;
         }
         
@@ -235,7 +242,7 @@ static int run_single_connection(const bench_config_t *config, conn_stats_t *sta
     }
     
     if (config->verbose) {
-        printf("Connection %d: Sent %lu bytes\n", stats->conn_id, stats->bytes_sent);
+        printf("Connection %d: Sent %" PRIu64 " bytes\n", stats->conn_id, stats->bytes_sent);
     }
     
     // Receive echo response
@@ -245,7 +252,7 @@ static int run_single_connection(const bench_config_t *config, conn_stats_t *sta
     }
     
     if (config->verbose) {
-        printf("Connection %d: Received %lu bytes\n", stats->conn_id, stats->bytes_received);
+        printf("Connection %d: Received %" PRIu64 " bytes\n", stats->conn_id, stats->bytes_received);
     }
     
     // Close connection properly

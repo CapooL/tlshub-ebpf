@@ -5,6 +5,7 @@
 #include <unistd.h>
 #include <sys/resource.h>
 #include <sys/time.h>
+#include <inttypes.h>
 
 // Calculate time difference in milliseconds
 double timespec_diff_ms(struct timespec *start, struct timespec *end) {
@@ -97,10 +98,29 @@ void finalize_metrics(global_metrics_t *metrics) {
     if (metrics->successful_connections > 0) {
         metrics->avg_connection_latency_ms /= metrics->successful_connections;
         metrics->avg_throughput_mbps /= metrics->successful_connections;
+    } else {
+        // No successful connections: avoid exposing sentinel or partial values
+        metrics->avg_connection_latency_ms = 0.0;
+        metrics->min_connection_latency_ms = 0.0;
+        metrics->max_connection_latency_ms = 0.0;
+        metrics->avg_throughput_mbps = 0.0;
     }
     
-    // Get system resource usage
-    get_cpu_usage(&metrics->cpu_usage_percent);
+    // Get system resource usage - use process CPU time instead of system-wide
+    struct rusage usage;
+    if (getrusage(RUSAGE_SELF, &usage) == 0 &&
+        metrics->total_test_duration_sec > 0.0) {
+        double user_time_sec = usage.ru_utime.tv_sec +
+                               usage.ru_utime.tv_usec / 1000000.0;
+        double sys_time_sec  = usage.ru_stime.tv_sec +
+                               usage.ru_stime.tv_usec / 1000000.0;
+        double cpu_time_sec  = user_time_sec + sys_time_sec;
+        metrics->cpu_usage_percent =
+            (cpu_time_sec / metrics->total_test_duration_sec) * 100.0;
+    } else {
+        metrics->cpu_usage_percent = 0.0;
+    }
+    
     get_memory_usage(&metrics->memory_usage_mb);
 }
 
@@ -132,8 +152,8 @@ int export_metrics_json(const char *filename, const bench_config_t *config,
     fprintf(fp, "    \"successful_connections\": %d,\n", metrics->successful_connections);
     fprintf(fp, "    \"failed_connections\": %d,\n", metrics->failed_connections);
     fprintf(fp, "    \"timeout_connections\": %d,\n", metrics->timeout_connections);
-    fprintf(fp, "    \"total_bytes_sent\": %lu,\n", metrics->total_bytes_sent);
-    fprintf(fp, "    \"total_bytes_received\": %lu,\n", metrics->total_bytes_received);
+    fprintf(fp, "    \"total_bytes_sent\": %" PRIu64 ",\n", metrics->total_bytes_sent);
+    fprintf(fp, "    \"total_bytes_received\": %" PRIu64 ",\n", metrics->total_bytes_received);
     fprintf(fp, "    \"avg_connection_latency_ms\": %.3f,\n", metrics->avg_connection_latency_ms);
     fprintf(fp, "    \"min_connection_latency_ms\": %.3f,\n", metrics->min_connection_latency_ms);
     fprintf(fp, "    \"max_connection_latency_ms\": %.3f,\n", metrics->max_connection_latency_ms);
@@ -148,8 +168,8 @@ int export_metrics_json(const char *filename, const bench_config_t *config,
         fprintf(fp, "    {\n");
         fprintf(fp, "      \"conn_id\": %d,\n", conn_stats_array[i].conn_id);
         fprintf(fp, "      \"state\": %d,\n", conn_stats_array[i].state);
-        fprintf(fp, "      \"bytes_sent\": %lu,\n", conn_stats_array[i].bytes_sent);
-        fprintf(fp, "      \"bytes_received\": %lu,\n", conn_stats_array[i].bytes_received);
+        fprintf(fp, "      \"bytes_sent\": %" PRIu64 ",\n", conn_stats_array[i].bytes_sent);
+        fprintf(fp, "      \"bytes_received\": %" PRIu64 ",\n", conn_stats_array[i].bytes_received);
         fprintf(fp, "      \"connection_latency_ms\": %.3f,\n", conn_stats_array[i].connection_latency_ms);
         fprintf(fp, "      \"data_transfer_time_ms\": %.3f,\n", conn_stats_array[i].data_transfer_time_ms);
         fprintf(fp, "      \"throughput_mbps\": %.3f\n", conn_stats_array[i].throughput_mbps);
@@ -187,8 +207,8 @@ int export_metrics_csv(const char *filename, const bench_config_t *config,
     fprintf(fp, "Successful Connections,%d\n", metrics->successful_connections);
     fprintf(fp, "Failed Connections,%d\n", metrics->failed_connections);
     fprintf(fp, "Timeout Connections,%d\n", metrics->timeout_connections);
-    fprintf(fp, "Total Bytes Sent,%lu\n", metrics->total_bytes_sent);
-    fprintf(fp, "Total Bytes Received,%lu\n", metrics->total_bytes_received);
+    fprintf(fp, "Total Bytes Sent,%" PRIu64 "\n", metrics->total_bytes_sent);
+    fprintf(fp, "Total Bytes Received,%" PRIu64 "\n", metrics->total_bytes_received);
     fprintf(fp, "Avg Connection Latency (ms),%.3f\n", metrics->avg_connection_latency_ms);
     fprintf(fp, "Min Connection Latency (ms),%.3f\n", metrics->min_connection_latency_ms);
     fprintf(fp, "Max Connection Latency (ms),%.3f\n", metrics->max_connection_latency_ms);
@@ -203,7 +223,7 @@ int export_metrics_csv(const char *filename, const bench_config_t *config,
     fprintf(fp, "Connection Latency (ms),Data Transfer Time (ms),Throughput (Mbps)\n");
     
     for (int i = 0; i < num_connections; i++) {
-        fprintf(fp, "%d,%d,%lu,%lu,%.3f,%.3f,%.3f\n",
+        fprintf(fp, "%d,%d,%" PRIu64 ",%" PRIu64 ",%.3f,%.3f,%.3f\n",
                 conn_stats_array[i].conn_id,
                 conn_stats_array[i].state,
                 conn_stats_array[i].bytes_sent,
