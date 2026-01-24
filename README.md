@@ -131,6 +131,7 @@ sudo ./capture /path/to/custom/capture.conf
 - [README.md](capture/docs/README.md) - 完整的使用说明
 - [ARCHITECTURE.md](capture/docs/ARCHITECTURE.md) - 架构设计文档
 - [API.md](capture/docs/API.md) - API 参考文档
+- [LIBBPF_COMPATIBILITY_CN.md](capture/docs/LIBBPF_COMPATIBILITY_CN.md) - libbpf 版本兼容性说明
 
 ### 性能测试文档
 
