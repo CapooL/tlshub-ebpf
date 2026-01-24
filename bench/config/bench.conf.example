@@ -1,0 +1,96 @@
+# TLShub Benchmark Configuration Example
+#
+# This file demonstrates how to set up different test scenarios
+# Copy and modify as needed for your testing requirements
+
+# =====================================
+# Scenario 1: Basic Connectivity Test
+# =====================================
+# Test basic connectivity with small data packets
+# Command:
+#   ./tlshub_bench --mode client \
+#     --target-ip 127.0.0.1 \
+#     --target-port 9090 \
+#     --data-size 1024 \
+#     --total-connections 10 \
+#     --verbose
+
+# =====================================
+# Scenario 2: Throughput Test
+# =====================================
+# Test maximum throughput with large data packets
+# Command:
+#   ./tlshub_bench --mode client \
+#     --target-ip 127.0.0.1 \
+#     --target-port 9090 \
+#     --data-size 65536 \
+#     --total-connections 100 \
+#     --json throughput_test.json \
+#     --csv throughput_test.csv
+
+# =====================================
+# Scenario 3: Concurrency Stress Test
+# =====================================
+# Test system under high concurrent load
+# Command:
+#   ./tlshub_bench --mode client \
+#     --target-ip 127.0.0.1 \
+#     --target-port 9090 \
+#     --data-size 4096 \
+#     --total-connections 1000 \
+#     --concurrency 50 \
+#     --json stress_test.json \
+#     --csv stress_test.csv
+
+# =====================================
+# Scenario 4: TLShub Integration Test
+# =====================================
+# Test TLShub traffic interception and mTLS handshake
+# Prerequisites:
+#   1. TLShub kernel module loaded
+#   2. Capture program running with proper configuration
+#   3. Pod-Node mapping configured
+#
+# Steps:
+#   Terminal 1: sudo ./capture /etc/tlshub/capture.conf
+#   Terminal 2: ./tlshub_bench --mode server --listen-port 9090
+#   Terminal 3: ./tlshub_bench --mode client \
+#                 --target-ip <pod-ip> \
+#                 --target-port 9090 \
+#                 --data-size 8192 \
+#                 --total-connections 50 \
+#                 --json tlshub_integration.json \
+#                 --csv tlshub_integration.csv \
+#                 --verbose
+
+# =====================================
+# Echo Server Configuration
+# =====================================
+# Start echo server for testing
+# Command:
+#   ./tlshub_bench --mode server --listen-port 9090
+
+# =====================================
+# Advanced Configuration Notes
+# =====================================
+#
+# 1. Data Size Selection:
+#    - Small packets (512-1024 bytes): Test connection overhead
+#    - Medium packets (4096-8192 bytes): Balanced testing
+#    - Large packets (32768-65536 bytes): Throughput testing
+#
+# 2. Concurrency Levels:
+#    - Low (1-10): Sequential testing, easier debugging
+#    - Medium (10-50): Moderate load testing
+#    - High (50-1000): Stress testing, requires tuning ulimit
+#
+# 3. Target IP Configuration:
+#    - 127.0.0.1: Local loopback testing
+#    - <pod-ip>: TLShub interception testing
+#    - <remote-ip>: Network latency testing
+#
+# 4. System Tuning:
+#    For high connection counts, increase system limits:
+#      ulimit -n 10000          # File descriptors
+#      sysctl -w net.ipv4.ip_local_port_range="10000 65535"
+#      sysctl -w net.ipv4.tcp_tw_reuse=1

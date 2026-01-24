@@ -24,6 +24,12 @@ example_metrics.json
 example_metrics.csv
 /capture/test/perf_results/
 
+# Benchmark output files
+bench_metrics_*.json
+bench_metrics_*.csv
+/bench/tlshub_bench
+/bench/test_results/
+
 # Dependencies
 node_modules/
 vendor/
