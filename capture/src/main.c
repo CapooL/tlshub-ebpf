@@ -6,6 +6,12 @@
 #include <errno.h>
 #include <bpf/libbpf.h>
 #include <bpf/bpf.h>
+/* Try to include libbpf_version.h for version detection */
+#ifdef __has_include
+  #if __has_include(<bpf/libbpf_version.h>)
+    #include <bpf/libbpf_version.h>
+  #endif
+#endif
 #include "capture.h"
 #include "key_provider.h"
 #include "ktls_config.h"
@@ -304,7 +310,19 @@ int main(int argc, char **argv) {
         goto cleanup;
     }
     
+    /* 根据 libbpf 版本使用不同的 API */
+#if defined(LIBBPF_MAJOR_VERSION) && LIBBPF_MAJOR_VERSION >= 1
+    /* libbpf 1.0+ API: 回调函数作为独立参数传递 */
     pb = perf_buffer__new(events_fd, 8, handle_tcp_event, NULL, NULL, NULL);
+#else
+    /* libbpf 0.x API: 回调函数通过 opts 结构体传递 */
+    struct perf_buffer_opts pb_opts = {
+        .sample_cb = handle_tcp_event,
+        .lost_cb = NULL,
+        .ctx = NULL,
+    };
+    pb = perf_buffer__new(events_fd, 8, &pb_opts);
+#endif
     if (libbpf_get_error(pb)) {
         fprintf(stderr, "Failed to create perf buffer\n");
         err = -1;
