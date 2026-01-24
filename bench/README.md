@@ -31,10 +31,11 @@ TLShub 的 Layer 7（应用层）性能测试工具，用于模拟真实业务�
 
 ## 系统要求
 
-- Linux 系统（内核 >= 4.9）
+- Linux 系统（内核 >= 4.9，用于运行 `tlshub_bench` 工具本身）
+- 如果需要与 TLShub + KTLS 集成进行联调/压测，请使用 Linux 系统（内核 >= 5.2，满足 KTLS 支持要求）
 - GCC 编译器
 - Make 构建工具
-- （可选）TLShub 内核模块（用于实际测试）
+- （可选）TLShub 内核模块（用于实际测试 / 与 TLShub+KTLS 集成）
 
 ## 安装
 
