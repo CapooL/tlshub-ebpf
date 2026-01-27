@@ -103,8 +103,11 @@ sudo cp config/capture.conf /etc/tlshub/
 sudo cp config/pod_node_mapping.conf /etc/tlshub/
 
 # 根据实际情况修改 Pod-Node 映射
+# 注意：配置格式为 "pod_name node_name node_ip"
 sudo vi /etc/tlshub/pod_node_mapping.conf
 ```
+
+**重要更新（2026-01）**：Pod-Node 映射配置已升级为三字段格式（`pod_name node_name node_ip`），以支持 TLShub Netlink 接口的 `server_node_ip` 字段。详见 [Netlink 接口适配文档](docs/NETLINK_ADAPTATION_SUMMARY_CN.md)。
 
 ### 运行
 
@@ -132,6 +135,11 @@ sudo ./capture /path/to/custom/capture.conf
 - [ARCHITECTURE.md](capture/docs/ARCHITECTURE.md) - 架构设计文档
 - [API.md](capture/docs/API.md) - API 参考文档
 - [LIBBPF_COMPATIBILITY_CN.md](capture/docs/LIBBPF_COMPATIBILITY_CN.md) - libbpf 版本兼容性说明
+- [NETLINK_INTERFACE_UPDATE_CN.md](capture/docs/NETLINK_INTERFACE_UPDATE_CN.md) - Netlink 接口适配详细文档
+
+### 重要更新文档
+
+- [docs/NETLINK_ADAPTATION_SUMMARY_CN.md](docs/NETLINK_ADAPTATION_SUMMARY_CN.md) - TLShub Netlink 接口适配说明（2026-01）
 
 ### 性能测试文档
 
