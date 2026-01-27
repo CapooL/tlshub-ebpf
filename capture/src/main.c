@@ -244,6 +244,11 @@ int main(int argc, char **argv) {
         goto cleanup;
     }
     
+    /* 设置 Pod-Node 映射表到密钥提供者 */
+    if (pod_node_table) {
+        key_provider_set_pod_node_table(pod_node_table);
+    }
+    
     /* 初始化性能指标模块 */
     printf("Initializing performance metrics module...\n");
     perf_ctx = perf_metrics_init(DEFAULT_MAX_CONNECTIONS);

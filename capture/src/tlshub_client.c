@@ -23,6 +23,7 @@ typedef struct _user_msg_info {
 struct my_msg {
     uint32_t client_pod_ip;
     uint32_t server_pod_ip;
+    uint32_t server_node_ip;  /* 新增：服务端 Node IP（网络字节序） */
     unsigned short client_pod_port;
     unsigned short server_pod_port;
     char opcode;
@@ -179,7 +180,7 @@ void tlshub_client_cleanup(void) {
  * 注意：flow_tuple 使用标准的 saddr/daddr，需要映射到 Pod IP
  * 在点对点架构中，saddr = client_pod_ip, daddr = server_pod_ip
  */
-int tlshub_fetch_key(struct flow_tuple *tuple, struct tls_key_info *key_info) {
+int tlshub_fetch_key(struct flow_tuple *tuple, struct tls_key_info *key_info, uint32_t server_node_ip) {
     struct nlmsghdr *nlh = NULL;
     user_msg_info u_info;
     int ret;
@@ -214,6 +215,7 @@ int tlshub_fetch_key(struct flow_tuple *tuple, struct tls_key_info *key_info) {
     // - 内核会用 ntohl() 转换为主机序
     mmsg.client_pod_ip = tuple->saddr;  // 网络字节序
     mmsg.server_pod_ip = tuple->daddr;  // 网络字节序
+    mmsg.server_node_ip = server_node_ip;  // 网络字节序（新增）
     mmsg.client_pod_port = htons(tuple->sport);  // 主机序 → 网络序
     mmsg.server_pod_port = htons(tuple->dport);  // 主机序 → 网络序
     mmsg.server = false;
@@ -263,7 +265,7 @@ int tlshub_fetch_key(struct flow_tuple *tuple, struct tls_key_info *key_info) {
 /**
  * 通过 TLSHub 发起握手
  */
-int tlshub_handshake(struct flow_tuple *tuple) {
+int tlshub_handshake(struct flow_tuple *tuple, uint32_t server_node_ip) {
     static __thread struct nlmsghdr *nlh = NULL;
     user_msg_info u_info;
     int ret;
@@ -296,6 +298,7 @@ int tlshub_handshake(struct flow_tuple *tuple) {
     mmsg.opcode = TLS_SERVICE_START;
     mmsg.client_pod_ip = tuple->saddr;  // 网络字节序
     mmsg.server_pod_ip = tuple->daddr;  // 网络字节序
+    mmsg.server_node_ip = server_node_ip;  // 网络字节序（新增）
     mmsg.client_pod_port = htons(tuple->sport);  // 主机序 → 网络序
     mmsg.server_pod_port = htons(tuple->dport);  // 主机序 → 网络序
     mmsg.server = false;

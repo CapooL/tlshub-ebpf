@@ -2,6 +2,7 @@
 #define __KEY_PROVIDER_H__
 
 #include "capture.h"
+#include "pod_mapping.h"
 
 /**
  * 初始化密钥提供者
@@ -14,6 +15,12 @@ int key_provider_init(enum key_provider_mode mode);
  * 清理密钥提供者
  */
 void key_provider_cleanup(void);
+
+/**
+ * 设置 Pod-Node 映射表
+ * @param table: Pod-Node 映射表指针
+ */
+void key_provider_set_pod_node_table(struct pod_node_table *table);
 
 /**
  * 获取密钥
