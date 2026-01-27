@@ -5,9 +5,11 @@
 #include <openssl/err.h>
 #include "key_provider.h"
 #include "tlshub_client.h"
+#include "pod_mapping.h"
 
 static enum key_provider_mode current_mode = MODE_TLSHUB;
 static SSL_CTX *ssl_ctx = NULL;
+static struct pod_node_table *pod_node_table = NULL;
 
 /* OpenSSL 密钥协商函数 */
 static int openssl_get_key(struct flow_tuple *tuple, struct tls_key_info *key_info);
@@ -91,31 +93,56 @@ void key_provider_cleanup(void) {
 }
 
 /**
+ * 设置 Pod-Node 映射表
+ */
+void key_provider_set_pod_node_table(struct pod_node_table *table) {
+    pod_node_table = table;
+    printf("Pod-Node mapping table set in key provider\n");
+}
+
+/**
  * 获取密钥
  */
 int key_provider_get_key(struct flow_tuple *tuple, struct tls_key_info *key_info) {
     int ret;
+    uint32_t server_node_ip = 0;
     
     if (!tuple || !key_info) {
         fprintf(stderr, "Invalid parameters for key_provider_get_key\n");
         return -1;
     }
     
+    /* 如果有 Pod-Node 映射表，尝试查找 server_node_ip */
+    if (pod_node_table) {
+        server_node_ip = get_node_ip_by_pod_ip(pod_node_table, tuple->daddr);
+        if (server_node_ip != 0) {
+            char ip_str[INET_ADDRSTRLEN];
+            struct in_addr addr;
+            addr.s_addr = server_node_ip;
+            inet_ntop(AF_INET, &addr, ip_str, sizeof(ip_str));
+            printf("Found server_node_ip: %s for server_pod_ip\n", ip_str);
+        } else {
+            printf("Warning: server_node_ip not found in mapping table, using 0\n");
+        }
+    } else {
+        printf("Warning: Pod-Node mapping table not available, server_node_ip will be 0\n");
+    }
+    
     switch (current_mode) {
         case MODE_TLSHUB:
             /* 尝试从 TLSHub 获取密钥 */
-            ret = tlshub_fetch_key(tuple, key_info);
+            ret = tlshub_fetch_key(tuple, key_info, server_node_ip);
             if (ret < 0) {
                 /* 获取失败，发起握手 */
                 printf("Fetch key failed, initiating handshake\n");
-                ret = tlshub_handshake(tuple);
+                ret = tlshub_handshake(tuple, server_node_ip);
                 if (ret < 0) {
                     fprintf(stderr, "TLSHub handshake failed\n");
                     return ret;
                 }
                 
                 /* 握手成功后重试获取密钥 */
-                ret = tlshub_fetch_key(tuple, key_info);
+                ret = tlshub_fetch_key(tuple, key_info, server_node_ip);
                 if (ret < 0) {
                     fprintf(stderr, "Fetch key failed after handshake\n");
                     return ret;
